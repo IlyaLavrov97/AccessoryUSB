@@ -14,11 +14,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -78,6 +81,9 @@ class MainActivity : ComponentActivity() {
                 fileSize = fileSize,
                 onSendClick = {
                     sendFile()
+                },
+                onReceiveClick = {
+                    receiveData()
                 },
                 onConnectClick = {
                     connectAccessory()
@@ -152,6 +158,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun receiveData() {
+        if (accessory == null) {
+            Toast.makeText(this, "Не подключен аксессуар", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        try {
+            val inputAsString = inputStream?.bufferedReader().use { it?.readText() } ?: "Пусто"
+            Log.i("inputStream", inputAsString)
+            Toast.makeText(this, "Получено:" + inputAsString.take(10), Toast.LENGTH_SHORT).show()
+        } catch (e: IOException) {
+            Log.e(TAG, "Error receiving data", e)
+        }
+    }
+
     private fun connectAccessory() {
         if (usbManager.accessoryList.isNullOrEmpty())
             Toast.makeText(
@@ -215,7 +236,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        closeAccessory()
+        //closeAccessory()
     }
 
     private fun closeAccessory() {
@@ -234,6 +255,7 @@ class MainActivity : ComponentActivity() {
 fun USBHostExampleApp(
     fileSize: Long,
     onSendClick: () -> Unit,
+    onReceiveClick: () -> Unit,
     onConnectClick: () -> Unit,
     onMediaSelected: (Uri?) -> Unit
 ) {
@@ -246,56 +268,82 @@ fun USBHostExampleApp(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 44.dp)
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(20.dp)
         ) {
-            Button(
-                modifier = Modifier
-                    .padding(top = 30.dp)
-                    .height(54.dp)
-                    .fillMaxWidth(),
-                onClick = onConnectClick
-            ) {
-                Text(
-                    text = "Connect Accessory",
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Button(
-                modifier = Modifier
-                    .padding(top = 30.dp)
-                    .height(54.dp)
-                    .fillMaxWidth(),
-                onClick = onSendClick
-            ) {
-                Text(
-                    text = "Send Data",
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Button(
-                modifier = Modifier
-                    .padding(top = 30.dp)
-                    .height(54.dp)
-                    .fillMaxWidth(),
-                onClick = { launcher.launch("*/*") }
-            ) {
-                Text(text = "Select photo or video")
-            }
-
-            if (fileSize > 0)
-                Text(
+            item {
+                Button(
                     modifier = Modifier
                         .padding(top = 30.dp)
                         .height(54.dp)
                         .fillMaxWidth(),
-                    text = "Загруженно $fileSize байт"
-                )
+                    onClick = onConnectClick
+                ) {
+                    Text(
+                        text = "Connect Accessory",
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            item {
+                Button(
+                    modifier = Modifier
+                        .padding(top = 30.dp)
+                        .height(54.dp)
+                        .fillMaxWidth(),
+                    onClick = onSendClick
+                ) {
+                    Text(
+                        text = "Send Data",
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+
+            item {
+                Button(
+                    modifier = Modifier
+                        .padding(top = 30.dp)
+                        .height(54.dp)
+                        .fillMaxWidth(),
+                    onClick = onReceiveClick
+                ) {
+                    Text(
+                        text = "Receive Data",
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            item {
+                Button(
+                    modifier = Modifier
+                        .padding(top = 30.dp)
+                        .height(54.dp)
+                        .fillMaxWidth(),
+                    onClick = { launcher.launch("*/*") }
+                ) {
+                    Text(
+                        text = "Select photo or video"
+                    )
+                }
+
+                if (fileSize > 0)
+                    Text(
+                        modifier = Modifier
+                            .padding(top = 30.dp)
+                            .height(54.dp)
+                            .fillMaxWidth(),
+                        text = "Загруженно $fileSize байт"
+                    )
+            }
         }
     }
 }
