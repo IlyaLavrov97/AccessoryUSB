@@ -191,7 +191,7 @@ class MainActivity : ComponentActivity() {
                 val buffer = ByteArray(BUFFER_SIZE)
                 var bytesRead: Int
                 while (true) {
-                    if (inputStream!!.available() == 0) {
+                    if (inputStream!!.read() == -1) {
                         delay(100)
                         continue
                     }
