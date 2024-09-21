@@ -191,7 +191,7 @@ class MainActivity : ComponentActivity() {
                 val buffer = ByteArray(BUFFER_SIZE)
                 var bytesRead: Int
                 while (true) {
-                    if (inputStream!!.read() == -1) {
+                    if (inputStream!!.read(buffer) == -1) {
                         delay(100)
                         continue
                     }
@@ -203,7 +203,7 @@ class MainActivity : ComponentActivity() {
                             inputStream!!.skip(Long.MAX_VALUE)
                             return@launch
                         }
-                        result += (String(buffer, 0, bytesRead, StandardCharsets.UTF_8))
+                        result += String(buffer, 0, bytesRead, StandardCharsets.UTF_8)
                     }
                     Log.i("inputStream", result)
                     withContext(Dispatchers.Main) {
