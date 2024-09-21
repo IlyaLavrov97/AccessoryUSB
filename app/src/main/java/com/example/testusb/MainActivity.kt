@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
@@ -190,24 +189,20 @@ class MainActivity : ComponentActivity() {
             try {
                 val buffer = ByteArray(BUFFER_SIZE)
                 var bytesRead: Int
+
                 while (true) {
                     var result = ""
-                    val message = inputStream!!.read(buffer).also { bytesRead = it }
-
-                    if (message == -1 || message == 0) {
-                        delay(100)
-                        continue
-                    } else {
-                        result += message
-                    }
 
                     while (inputStream!!.read(buffer).also { bytesRead = it } != 0) {
                         if (receiveJob?.isCompleted == true) {
                             inputStream!!.skip(Long.MAX_VALUE)
                             return@launch
                         }
+
                         result += String(buffer, 0, bytesRead, StandardCharsets.UTF_8)
+                        if (bytesRead != BUFFER_SIZE) break
                     }
+
                     Log.i("inputStream", result)
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
