@@ -50,7 +50,7 @@ import java.nio.charset.StandardCharsets
 class MainActivity : ComponentActivity() {
     private val TAG = "USBHostExample"
     private val ACTION_USB_PERMISSION: String = "com.android.example.USB_PERMISSION"
-    private val BUFFER_SIZE = 512
+    private val BUFFER_SIZE = 64
 
     private lateinit var usbManager: UsbManager
     private var accessory: UsbAccessory? = null
