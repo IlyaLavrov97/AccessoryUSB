@@ -186,23 +186,21 @@ class MainActivity : ComponentActivity() {
             return false
         }
 
-        val inputStream = inputStream ?: return false
-
-        receiveJob = GlobalScope.launch {
+        receiveJob = GlobalScope.launch(Dispatchers.IO) {
             try {
                 val buffer = ByteArray(BUFFER_SIZE)
                 var bytesRead: Int
                 while (true) {
-                    if (inputStream.available() == 0) {
-                        delay(1000)
+                    if (inputStream!!.available() == 0) {
+                        delay(100)
                         continue
                     }
 
                     val result = StringBuilder()
 
-                    while ((inputStream.read(buffer).also { bytesRead = it }) != -1) {
+                    while ((inputStream!!.read(buffer).also { bytesRead = it }) != -1) {
                         if (receiveJob?.isCompleted == true) {
-                            inputStream.skip(Long.MAX_VALUE)
+                            inputStream!!.skip(Long.MAX_VALUE)
                             return@launch
                         }
                         result.append(String(buffer, 0, bytesRead, StandardCharsets.UTF_8))
@@ -222,20 +220,6 @@ class MainActivity : ComponentActivity() {
         }
 
         return true
-    }
-
-    @Throws(IOException::class)
-    fun readStream(inputStream: InputStream) {
-        val buffer = ByteArray(512)
-        var bytesRead: Int
-
-        val result = StringBuilder()
-
-        while ((inputStream.read(buffer).also { bytesRead = it }) != -1) {
-            result.append(String(buffer, 0, bytesRead, StandardCharsets.UTF_8))
-        }
-
-        println("Результат: $result")
     }
 
     private fun connectAccessory() {
