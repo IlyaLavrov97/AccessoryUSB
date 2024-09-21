@@ -192,15 +192,16 @@ class MainActivity : ComponentActivity() {
                 var bytesRead: Int
                 while (true) {
                     var result = ""
+                    val message = inputStream!!.read(buffer).also { bytesRead = it }
 
-                    if (inputStream!!.read(buffer).also { bytesRead = it } == -1) {
+                    if (message == -1 || message == 0) {
                         delay(100)
                         continue
                     } else {
-                        result += String(buffer, 0, bytesRead, StandardCharsets.UTF_8)
+                        result += message
                     }
 
-                    while (inputStream!!.read(buffer).also { bytesRead = it } != -1) {
+                    while (inputStream!!.read(buffer).also { bytesRead = it } != 0) {
                         if (receiveJob?.isCompleted == true) {
                             inputStream!!.skip(Long.MAX_VALUE)
                             return@launch
