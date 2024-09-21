@@ -196,20 +196,20 @@ class MainActivity : ComponentActivity() {
                         continue
                     }
 
-                    val result = StringBuilder()
+                    var result = ""
 
                     while ((inputStream!!.read(buffer).also { bytesRead = it }) != -1) {
                         if (receiveJob?.isCompleted == true) {
                             inputStream!!.skip(Long.MAX_VALUE)
                             return@launch
                         }
-                        result.append(String(buffer, 0, bytesRead, StandardCharsets.UTF_8))
+                        result += (String(buffer, 0, bytesRead, StandardCharsets.UTF_8))
                     }
-                    Log.i("inputStream", result.toString())
+                    Log.i("inputStream", result)
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@MainActivity,
-                            "Получено:" + result.toString().take(10),
+                            "Получено:" + result.take(10),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
