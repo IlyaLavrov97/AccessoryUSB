@@ -15,7 +15,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,27 +28,37 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.nio.charset.StandardCharsets
 
 
 class MainActivity : ComponentActivity() {
     private val TAG = "USBHostExample"
     private val ACTION_USB_PERMISSION: String = "com.android.example.USB_PERMISSION"
+    private val BUFFER_SIZE = 512
 
     private lateinit var usbManager: UsbManager
     private var accessory: UsbAccessory? = null
     private var fileDescriptor: ParcelFileDescriptor? = null
     private var inputStream: FileInputStream? = null
     private var outputStream: FileOutputStream? = null
+    private var receiveJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,13 +86,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             var fileSize by remember { mutableLongStateOf(0L) }
+            var receiveInProgress by remember { mutableStateOf(false) }
+
             USBHostExampleApp(
                 fileSize = fileSize,
+                receiveInProgress = receiveInProgress,
                 onSendClick = {
                     sendFile()
                 },
                 onReceiveClick = {
-                    receiveData()
+                    receiveInProgress = receiveData(receiveInProgress)
                 },
                 onConnectClick = {
                     connectAccessory()
@@ -158,19 +170,72 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun receiveData() {
-        if (accessory == null) {
-            Toast.makeText(this, "Не подключен аксессуар", Toast.LENGTH_SHORT).show()
-            return
+    private fun receiveData(receiveInProgress: Boolean): Boolean {
+        if (receiveInProgress) {
+            receiveJob?.cancel()
+            receiveJob = null
+            return false
         }
 
-        try {
-            val inputAsString = inputStream?.bufferedReader().use { it?.readText() } ?: "Пусто"
-            Log.i("inputStream", inputAsString)
-            Toast.makeText(this, "Получено:" + inputAsString.take(10), Toast.LENGTH_SHORT).show()
-        } catch (e: IOException) {
-            Log.e(TAG, "Error receiving data", e)
+        if (accessory == null) {
+            Toast.makeText(
+                this@MainActivity,
+                "Не подключен аксессуар",
+                Toast.LENGTH_SHORT
+            ).show()
+            return false
         }
+
+        val inputStream = inputStream ?: return false
+
+        receiveJob = GlobalScope.launch {
+            try {
+                val buffer = ByteArray(BUFFER_SIZE)
+                var bytesRead: Int
+                while (true) {
+                    if (inputStream.available() == 0) {
+                        delay(1000)
+                        continue
+                    }
+
+                    val result = StringBuilder()
+
+                    while ((inputStream.read(buffer).also { bytesRead = it }) != -1) {
+                        if (receiveJob?.isCompleted == true) {
+                            inputStream.skip(Long.MAX_VALUE)
+                            return@launch
+                        }
+                        result.append(String(buffer, 0, bytesRead, StandardCharsets.UTF_8))
+                    }
+                    Log.i("inputStream", result.toString())
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Получено:" + result.toString().take(10),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error receiving data", e)
+            }
+        }
+
+        return true
+    }
+
+    @Throws(IOException::class)
+    fun readStream(inputStream: InputStream) {
+        val buffer = ByteArray(512)
+        var bytesRead: Int
+
+        val result = StringBuilder()
+
+        while ((inputStream.read(buffer).also { bytesRead = it }) != -1) {
+            result.append(String(buffer, 0, bytesRead, StandardCharsets.UTF_8))
+        }
+
+        println("Результат: $result")
     }
 
     private fun connectAccessory() {
@@ -254,6 +319,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun USBHostExampleApp(
     fileSize: Long,
+    receiveInProgress: Boolean,
     onSendClick: () -> Unit,
     onReceiveClick: () -> Unit,
     onConnectClick: () -> Unit,
@@ -316,7 +382,7 @@ fun USBHostExampleApp(
                     onClick = onReceiveClick
                 ) {
                     Text(
-                        text = "Receive Data",
+                        text = if (receiveInProgress) "Stop Receive Data" else "Start Receive Data",
                         textAlign = TextAlign.Center
                     )
                 }
