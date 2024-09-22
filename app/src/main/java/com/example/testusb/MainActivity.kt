@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
 
     private fun sendFileInChunks(
         inputStream: InputStream?,
-        chunkSize: Int = 512,
+        chunkSize: Int = BUFFER_SIZE,
         onChunkReady: (ByteArray) -> Unit
     ) {
         inputStream?.use { stream ->
